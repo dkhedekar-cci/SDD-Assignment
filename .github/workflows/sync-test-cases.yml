@@ -1,0 +1,51 @@
+name: Sync Test Cases to Excel
+
+on:
+  push:
+    paths:
+      - 'specifications/011-central-repo/testcases.md'
+  pull_request:
+    paths:
+      - 'specifications/011-central-repo/testcases.md'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install openpyxl
+      
+      - name: Sync test cases to Excel
+        run: |
+          cd specifications/011-central-repo
+          python3 sync_testcases.py .
+      
+      - name: Verify Excel files
+        run: |
+          cd specifications/011-central-repo
+          ls -lh *.xlsx
+      
+      - name: Commit changes
+        if: github.event_name == 'push'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Test Case Sync Bot"
+          
+          if git diff --quiet; then
+            echo "✅ No changes needed"
+          else
+            git add specifications/011-central-repo/*.xlsx
+            git commit -m "🔄 Auto-sync: Update test case Excel exports ($(date +'%Y-%m-%d %H:%M:%S'))"
+            git push
+          fi
